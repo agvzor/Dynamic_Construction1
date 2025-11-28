@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Динамический расчет рентабельности строительных работ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            font-size: 13px;
+        }
+
+        .container {
+            max-width: 100%;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #8b9197 0%, #6c757d 100%);
+            color: white;
+            padding: 35px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            left: -10%;
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 15px;
+            opacity: 0.95;
+            font-weight: 400;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 18px;
+            margin-top: 25px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.18);
+            padding: 18px 16px;
+            border-radius: 12px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.4);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            opacity: 0.92;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .toolbar {
+            background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
+            padding: 20px 30px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 11px 22px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
+            background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #495057;
+            border: 2px solid #dee2e6;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .btn-secondary:hover {
+            background: #f8f9fa;
+            border-color: #ced4da;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .content {
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            min-width: 2000px;
+        }
+
+        th {
+            background: linear-gradient(180deg, #d6d8db 0%, #c1c5c9 100%);
+            color: #1a1d20;
+            font-weight: 700;
+            padding: 12px 8px;
+            text-align: center;
+            border: 2px solid #95999d;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-size: 11px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        th.section-header {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 700;
+            border: 2px solid #343a40;
+        }
+
+        td {
+            padding: 8px 6px;
+            border: 1px solid #ced4da;
+            text-align: center;
+            color: #212529;
+        }
+
+        .work-row {
+            background: #e9ecef;
+            font-weight: 600;
+            border-top: 3px solid #adb5bd;
+            border-bottom: 2px solid #adb5bd;
+        }
+
+        .work-row td {
+            border: 1px solid #adb5bd;
+        }
+
+        .work-row td:first-child {
+            text-align: left;
+            font-size: 14px;
+            color: #212529;
+            font-weight: 700;
+        }
+
+        .resource-row {
+            background: white;
+            transition: background 0.2s ease;
+        }
+
+        .resource-row:hover {
+            background: #f8f9fa;
+        }
+
+        .resource-row td:first-child {
+            text-align: left;
+            padding-left: 30px;
+            font-size: 12px;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .total-row {
+            background: linear-gradient(135deg, #adb5bd 0%, #868e96 100%);
+            font-weight: bold;
+            font-size: 14px;
+            color: #000;
+            border-top: 4px solid #495057;
+            border-bottom: 4px solid #495057;
+        }
+
+        .total-row td {
+            border: 2px solid #6c757d;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 6px 8px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 12px;
+            background: #fff;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #adb5bd;
+            box-shadow: 0 0 0 3px rgba(173, 181, 189, 0.15);
+            background: #f8f9fa;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .calculated {
+            background: linear-gradient(135deg, #f1f3f5 0%, #e9ecef 100%);
+            color: #495057;
+            font-weight: 600;
+            border-left: 3px solid #adb5bd;
+        }
+
+        .icon {
+            font-style: normal;
+            margin-right: 6px;
+            font-size: 14px;
+        }
+
+        .delete-btn {
+            background: linear-gradient(135deg, #868e96 0%, #6c757d 100%);
+            color: white;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .delete-btn:hover {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(52, 58, 64, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 35px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            border: 1px solid #e9ecef;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 25px;
+            color: #343a40;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 13px;
+            letter-spacing: 0.2px;
+            text-transform: uppercase;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #adb5bd;
+            box-shadow: 0 0 0 3px rgba(173, 181, 189, 0.15);
+        }
+
+        optgroup {
+            font-weight: 700;
+            font-style: normal;
+            color: #495057;
+            background: #f8f9fa;
+            padding: 8px 0;
+        }
+
+        .notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 2000;
+            animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px) scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .col-narrow { width: 70px; }
+        .col-medium { width: 90px; }
+        .col-wide { width: 110px; }
+
+        .positive { color: #5a6268; font-weight: 700; }
+        .negative { color: #868e96; font-weight: 700; }
+
+        @media print {
+            .toolbar, .delete-btn { display: none; }
+            body { background: white; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ДИНАМИЧЕСКИЙ РАСЧЕТ РЕНТАБЕЛЬНОСТИ</h1>
+            <p>Строительные работы • Многоэтажный жилой дом • Профессиональный анализ</p>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Прямые затраты</div>
+                    <div class="stat-value" id="totalDirect">0.00 ₽</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Накладные 12%</div>
+                    <div class="stat-value" id="totalOverhead">0.00 ₽</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Сметная прибыль 8%</div>
+                    <div class="stat-value" id="totalProfit">0.00 ₽</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Себестоимость IN</div>
+                    <div class="stat-value" id="totalCostIn">0.00 ₽</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Цена OUT</div>
+                    <div class="stat-value" id="totalCostOut">0.00 ₽</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn btn-primary" onclick="openAddWorkModal()">
+                <span class="icon">✚</span> Добавить работу
+            </button>
+            <button class="btn btn-secondary" onclick="recalculateAll()">
+                <span class="icon">↻</span> Пересчитать всё
+            </button>
+            <button class="btn btn-secondary" onclick="loadDemo()">
+                <span class="icon">◉</span> Демо-проект
+            </button>
+            <button class="btn btn-secondary" onclick="exportData()">
+                <span class="icon">⇩</span> Экспорт CSV
+            </button>
+            <button class="btn btn-secondary" onclick="clearAll()">
+                <span class="icon">⌫</span> Очистить всё
+            </button>
+        </div>
+
+        <div class="content">
+            <table id="mainTable">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="min-width: 200px;">Наименование работ и затрат</th>
+                        <th rowspan="2" class="col-narrow">ФО</th>
+                        <th rowspan="2" class="col-narrow">ЕИ</th>
+                        <th colspan="4" class="section-header">◆ ТРУДОЗАТРАТЫ</th>
+                        <th colspan="5" class="section-header">◆ МАТЕРИАЛЫ</th>
+                        <th colspan="4" class="section-header">◆ МЕХАНИЗМЫ</th>
+                        <th rowspan="2" class="col-medium calculated">Прямые<br>затраты (₽)</th>
+                        <th rowspan="2" class="col-medium calculated">Накладные<br>12% (₽)</th>
+                        <th rowspan="2" class="col-medium calculated">Сметная<br>прибыль 8% (₽)</th>
+                        <th rowspan="2" class="col-medium calculated">Себестоимость<br>IN (₽)</th>
+                        <th rowspan="2" class="col-medium calculated">Цена<br>OUT (₽)</th>
+                        <th rowspan="2" class="col-medium calculated">Рентабельность<br>(%)</th>
+                        <th rowspan="2" style="width: 80px;">Действия</th>
+                    </tr>
+                    <tr>
+                        <th class="col-narrow">Норма<br>(чел-час)</th>
+                        <th class="col-narrow">Объем<br>(чел-час)</th>
+                        <th class="col-narrow">Цена<br>(₽/час)</th>
+                        <th class="col-medium">Стоимость<br>(₽)</th>
+                        <th class="col-narrow">Норма</th>
+                        <th class="col-narrow">Объем</th>
+                        <th class="col-narrow">Цена IN<br>(₽/ед)</th>
+                        <th class="col-narrow">Цена OUT<br>(₽/ед)</th>
+                        <th class="col-medium">Стоимость<br>(₽)</th>
+                        <th class="col-narrow">Норма<br>(маш-час)</th>
+                        <th class="col-narrow">Объем<br>(маш-час)</th>
+                        <th class="col-narrow">Цена<br>(₽/час)</th>
+                        <th class="col-medium">Стоимость<br>(₽)</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr class="total-row">
+                        <td colspan="3" style="text-align: right; font-size: 14px;">ИТОГО ПО СМЕТЕ:</td>
+                        <td colspan="4" id="sumLabor" class="calculated">0.00</td>
+                        <td colspan="5" id="sumMaterials" class="calculated">0.00</td>
+                        <td colspan="4" id="sumMachines" class="calculated">0.00</td>
+                        <td id="sumDirect" class="calculated">0.00</td>
+                        <td id="sumOverhead" class="calculated">0.00</td>
+                        <td id="sumProfit" class="calculated">0.00</td>
+                        <td id="sumCostIn" class="calculated">0.00</td>
+                        <td id="sumCostOut" class="calculated">0.00</td>
+                        <td id="sumRentability" class="calculated">0.00</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Модальное окно -->
+    <div class="modal" id="addWorkModal">
+        <div class="modal-content">
+            <h2>➕ Добавление работы</h2>
+            <div class="form-group">
+                <label for="workSelect">Выберите работу:</label>
+                <select id="workSelect">
+                    <optgroup label="🏗️ ЗЕМЛЯНЫЕ РАБОТЫ">
+                        <option value="0">Разработка грунта экскаватором</option>
+                        <option value="1">Разработка грунта вручную</option>
+                        <option value="2">Устройство песчаной подготовки</option>
+                    </optgroup>
+                    <optgroup label="🏛️ ФУНДАМЕНТНЫЕ РАБОТЫ">
+                        <option value="3">Установка опалубки ленточных фундаментов</option>
+                        <option value="4">Армирование ленточных фундаментов</option>
+                        <option value="5">Бетонирование ленточных фундаментов</option>
+                    </optgroup>
+                    <optgroup label="🏢 МОНОЛИТНЫЙ КАРКАС">
+                        <option value="6">Установка опалубки колонн</option>
+                        <option value="7">Армирование колонн</option>
+                        <option value="8">Бетонирование колонн</option>
+                        <option value="9">Установка опалубки перекрытий</option>
+                        <option value="10">Армирование перекрытий</option>
+                        <option value="11">Бетонирование перекрытий</option>
+                        <option value="12">Установка опалубки монолитных стен</option>
+                        <option value="13">Армирование монолитных стен</option>
+                        <option value="14">Бетонирование монолитных стен</option>
+                    </optgroup>
+                    <optgroup label="🧱 КАМЕННЫЕ РАБОТЫ">
+                        <option value="15">Кладка наружных стен из газобетона</option>
+                        <option value="16">Кладка наружных стен из кирпича</option>
+                        <option value="17">Кладка внутренних стен</option>
+                    </optgroup>
+                    <optgroup label="🎨 ОТДЕЛОЧНЫЕ РАБОТЫ">
+                        <option value="18">Штукатурка стен механизированная</option>
+                        <option value="19">Шпатлевка стен под окраску</option>
+                        <option value="20">Окраска стен водоэмульсионной краской</option>
+                        <option value="21">Облицовка стен керамической плиткой</option>
+                        <option value="22">Устройство стяжки пола</option>
+                        <option value="23">Укладка керамогранита</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="volumeInput">Физический объем (ФО):</label>
+                <input type="number" id="volumeInput" value="100" min="0" step="0.01">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeAddWorkModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="addWork()">Добавить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // База данных работ
+        const WORK_DATABASE = [
+            // ЗЕМЛЯНЫЕ РАБОТЫ
+            {
+                name: "Разработка грунта экскаватором",
+                unit: "м³",
+                labor: [
+                    { name: "Машинист экскаватора 6 разр.", norm: 0.12, price: 500 },
+                    { name: "Помощник машиниста 4 разр.", norm: 0.12, price: 350 }
+                ],
+                materials: [],
+                machines: [
+                    { name: "Экскаватор ЭО-4121 (0.63 м³)", norm: 0.12, price: 1850 }
+                ]
+            },
+            {
+                name: "Разработка грунта вручную",
+                unit: "м³",
+                labor: [
+                    { name: "Землекоп 2 разр.", norm: 2.8, price: 280 }
+                ],
+                materials: [],
+                machines: []
+            },
+            {
+                name: "Устройство песчаной подготовки",
+                unit: "м³",
+                labor: [
+                    { name: "Бетонщик 3 разр.", norm: 0.35, price: 360 },
+                    { name: "Бетонщик 2 разр.", norm: 0.45, price: 290 }
+                ],
+                materials: [
+                    { name: "Песок строительный", norm: 1.05, priceIn: 850, priceOut: 1100 }
+                ],
+                machines: [
+                    { name: "Виброплита", norm: 0.15, price: 450 }
+                ]
+            },
+            // ФУНДАМЕНТНЫЕ РАБОТЫ
+            {
+                name: "Установка опалубки ленточных фундаментов",
+                unit: "м²",
+                labor: [
+                    { name: "Плотник 4 разр.", norm: 0.9, price: 420 },
+                    { name: "Плотник 3 разр.", norm: 1.4, price: 360 }
+                ],
+                materials: [
+                    { name: "Щиты опалубки инвентарные", norm: 1.05, priceIn: 380, priceOut: 480 },
+                    { name: "Крепеж (гвозди, шпильки)", norm: 0.6, priceIn: 95, priceOut: 120 }
+                ],
+                machines: []
+            },
+            {
+                name: "Армирование ленточных фундаментов",
+                unit: "т",
+                labor: [
+                    { name: "Арматурщик 4 разр.", norm: 9.8, price: 420 },
+                    { name: "Арматурщик 3 разр.", norm: 19.5, price: 360 }
+                ],
+                materials: [
+                    { name: "Арматура А500С Ø12-14", norm: 1.015, priceIn: 52000, priceOut: 65000 },
+                    { name: "Проволока вязальная", norm: 12, priceIn: 75, priceOut: 95 }
+                ],
+                machines: []
+            },
+            {
+                name: "Бетонирование ленточных фундаментов",
+                unit: "м³",
+                labor: [
+                    { name: "Бетонщик 4 разр.", norm: 0.45, price: 420 },
+                    { name: "Бетонщик 3 разр.", norm: 0.7, price: 360 },
+                    { name: "Бетонщик 2 разр.", norm: 1.1, price: 290 }
+                ],
+                materials: [
+                    { name: "Бетон В25 (М350)", norm: 1.015, priceIn: 4200, priceOut: 5500 },
+                    { name: "Добавка противоморозная", norm: 3.5, priceIn: 120, priceOut: 150 }
+                ],
+                machines: [
+                    { name: "Бетононасос", norm: 0.12, price: 2800 },
+                    { name: "Вибратор глубинный", norm: 0.2, price: 380 }
+                ]
+            },
+            // МОНОЛИТНЫЙ КАРКАС - КОЛОННЫ
+            {
+                name: "Установка опалубки колонн",
+                unit: "м²",
+                labor: [
+                    { name: "Плотник 4 разр.", norm: 1.5, price: 420 },
+                    { name: "Плотник 3 разр.", norm: 2.1, price: 360 }
+                ],
+                materials: [
+                    { name: "Опалубка колонн инвентарная", norm: 1.08, priceIn: 520, priceOut: 680 },
+                    { name: "Крепеж", norm: 1.2, priceIn: 95, priceOut: 120 }
+                ],
+                machines: []
+            },
+            {
+                name: "Армирование колонн",
+                unit: "т",
+                labor: [
+                    { name: "Арматурщик 4 разр.", norm: 14.2, price: 420 },
+                    { name: "Арматурщик 3 разр.", norm: 28.4, price: 360 }
+                ],
+                materials: [
+                    { name: "Арматура А500С Ø14-18", norm: 1.012, priceIn: 52000, priceOut: 65000 },
+                    { name: "Проволока вязальная", norm: 15, priceIn: 75, priceOut: 95 }
+                ],
+                machines: []
+            },
+            {
+                name: "Бетонирование колонн",
+                unit: "м³",
+                labor: [
+                    { name: "Бетонщик 4 разр.", norm: 0.65, price: 420 },
+                    { name: "Бетонщик 3 разр.", norm: 0.95, price: 360 },
+                    { name: "Бетонщик 2 разр.", norm: 1.4, price: 290 }
+                ],
+                materials: [
+                    { name: "Бетон В30 (М400)", norm: 1.01, priceIn: 4800, priceOut: 6200 }
+                ],
+                machines: [
+                    { name: "Бетононасос", norm: 0.1, price: 2800 },
+                    { name: "Вибратор глубинный", norm: 0.3, price: 380 }
+                ]
+            },
+            // МОНОЛИТНЫЙ КАРКАС - ПЕРЕКРЫТИЯ
+            {
+                name: "Установка опалубки перекрытий",
+                unit: "м²",
+                labor: [
+                    { name: "Плотник 4 разр.", norm: 1.2, price: 420 },
+                    { name: "Плотник 3 разр.", norm: 1.8, price: 360 }
+                ],
+                materials: [
+                    { name: "Опалубка перекрытий инвентарная", norm: 1.05, priceIn: 450, priceOut: 580 },
+                    { name: "Стойки телескопические", norm: 2.5, priceIn: 190, priceOut: 240 },
+                    { name: "Крепеж", norm: 0.8, priceIn: 85, priceOut: 110 }
+                ],
+                machines: []
+            },
+            {
+                name: "Армирование перекрытий",
+                unit: "т",
+                labor: [
+                    { name: "Арматурщик 4 разр.", norm: 12.5, price: 420 },
+                    { name: "Арматурщик 3 разр.", norm: 25.0, price: 360 }
+                ],
+                materials: [
+                    { name: "Арматура А500С Ø10-14", norm: 1.012, priceIn: 52000, priceOut: 65000 },
+                    { name: "Проволока вязальная", norm: 18, priceIn: 75, priceOut: 95 },
+                    { name: "Фиксаторы защитного слоя", norm: 120, priceIn: 9.5, priceOut: 12 }
+                ],
+                machines: []
+            },
+            {
+                name: "Бетонирование перекрытий",
+                unit: "м³",
+                labor: [
+                    { name: "Бетонщик 4 разр.", norm: 0.55, price: 420 },
+                    { name: "Бетонщик 3 разр.", norm: 0.85, price: 360 },
+                    { name: "Бетонщик 2 разр.", norm: 1.3, price: 290 }
+                ],
+                materials: [
+                    { name: "Бетон В25 (М350)", norm: 1.012, priceIn: 4200, priceOut: 5500 }
+                ],
+                machines: [
+                    { name: "Бетононасос", norm: 0.15, price: 2800 },
+                    { name: "Вибратор глубинный", norm: 0.25, price: 380 }
+                ]
+            },
+            // МОНОЛИТНЫЙ КАРКАС - СТЕНЫ
+            {
+                name: "Установка опалубки монолитных стен",
+                unit: "м²",
+                labor: [
+                    { name: "Плотник 4 разр.", norm: 1.1, price: 420 },
+                    { name: "Плотник 3 разр.", norm: 1.6, price: 360 }
+                ],
+                materials: [
+                    { name: "Щиты опалубки стен", norm: 1.05, priceIn: 420, priceOut: 540 },
+                    { name: "Крепеж", norm: 0.9, priceIn: 95, priceOut: 120 }
+                ],
+                machines: []
+            },
+            {
+                name: "Армирование монолитных стен",
+                unit: "т",
+                labor: [
+                    { name: "Арматурщик 4 разр.", norm: 11.5, price: 420 },
+                    { name: "Арматурщик 3 разр.", norm: 23.0, price: 360 }
+                ],
+                materials: [
+                    { name: "Арматура А500С Ø10-12", norm: 1.012, priceIn: 52000, priceOut: 65000 },
+                    { name: "Проволока вязальная", norm: 14, priceIn: 75, priceOut: 95 }
+                ],
+                machines: []
+            },
+            {
+                name: "Бетонирование монолитных стен",
+                unit: "м³",
+                labor: [
+                    { name: "Бетонщик 4 разр.", norm: 0.5, price: 420 },
+                    { name: "Бетонщик 3 разр.", norm: 0.75, price: 360 },
+                    { name: "Бетонщик 2 разр.", norm: 1.15, price: 290 }
+                ],
+                materials: [
+                    { name: "Бетон В25 (М350)", norm: 1.012, priceIn: 4200, priceOut: 5500 }
+                ],
+                machines: [
+                    { name: "Бетононасос", norm: 0.13, price: 2800 },
+                    { name: "Вибратор глубинный", norm: 0.22, price: 380 }
+                ]
+            },
+            // КАМЕННЫЕ РАБОТЫ
+            {
+                name: "Кладка наружных стен из газобетона",
+                unit: "м³",
+                labor: [
+                    { name: "Каменщик 4 разр.", norm: 3.2, price: 420 },
+                    { name: "Каменщик 3 разр.", norm: 6.4, price: 360 },
+                    { name: "Подсобный рабочий 2 разр.", norm: 4.8, price: 260 }
+                ],
+                materials: [
+                    { name: "Блоки газобетонные D500", norm: 1.02, priceIn: 4200, priceOut: 5400 },
+                    { name: "Клей для газобетона", norm: 25, priceIn: 280, priceOut: 360 }
+                ],
+                machines: []
+            },
+            {
+                name: "Кладка наружных стен из кирпича",
+                unit: "м³",
+                labor: [
+                    { name: "Каменщик 4 разр.", norm: 4.8, price: 420 },
+                    { name: "Каменщик 3 разр.", norm: 9.6, price: 360 },
+                    { name: "Подсобный рабочий 2 разр.", norm: 7.2, price: 260 }
+                ],
+                materials: [
+                    { name: "Кирпич керамический М150", norm: 420, priceIn: 16.5, priceOut: 21 },
+                    { name: "Раствор цементный М100", norm: 0.25, priceIn: 3400, priceOut: 4400 }
+                ],
+                machines: []
+            },
+            {
+                name: "Кладка внутренних стен",
+                unit: "м³",
+                labor: [
+                    { name: "Каменщик 4 разр.", norm: 3.5, price: 420 },
+                    { name: "Каменщик 3 разр.", norm: 7.0, price: 360 },
+                    { name: "Подсобный рабочий 2 разр.", norm: 5.3, price: 260 }
+                ],
+                materials: [
+                    { name: "Блоки газобетонные D400", norm: 1.02, priceIn: 3800, priceOut: 4900 },
+                    { name: "Клей для газобетона", norm: 20, priceIn: 280, priceOut: 360 }
+                ],
+                machines: []
+            },
+            // ОТДЕЛОЧНЫЕ РАБОТЫ
+            {
+                name: "Штукатурка стен механизированная",
+                unit: "м²",
+                labor: [
+                    { name: "Штукатур 4 разр.", norm: 0.65, price: 390 },
+                    { name: "Штукатур 3 разр.", norm: 1.3, price: 330 }
+                ],
+                materials: [
+                    { name: "Раствор штукатурный", norm: 0.022, priceIn: 3300, priceOut: 4200 },
+                    { name: "Сетка штукатурная", norm: 1.05, priceIn: 48, priceOut: 62 }
+                ],
+                machines: [
+                    { name: "Штукатурная станция", norm: 0.06, price: 950 }
+                ]
+            },
+            {
+                name: "Шпатлевка стен под окраску",
+                unit: "м²",
+                labor: [
+                    { name: "Маляр 4 разр.", norm: 0.45, price: 380 },
+                    { name: "Маляр 3 разр.", norm: 0.65, price: 320 }
+                ],
+                materials: [
+                    { name: "Шпатлевка финишная", norm: 1.2, priceIn: 16, priceOut: 20.5 },
+                    { name: "Грунтовка", norm: 0.12, priceIn: 220, priceOut: 280 }
+                ],
+                machines: []
+            },
+            {
+                name: "Окраска стен водоэмульсионной краской",
+                unit: "м²",
+                labor: [
+                    { name: "Маляр 4 разр.", norm: 0.28, price: 380 },
+                    { name: "Маляр 3 разр.", norm: 0.42, price: 320 }
+                ],
+                materials: [
+                    { name: "Краска водоэмульсионная", norm: 0.28, priceIn: 320, priceOut: 410 }
+                ],
+                machines: []
+            },
+            {
+                name: "Облицовка стен керамической плиткой",
+                unit: "м²",
+                labor: [
+                    { name: "Облицовщик 5 разр.", norm: 1.8, price: 450 },
+                    { name: "Облицовщик 4 разр.", norm: 2.7, price: 390 }
+                ],
+                materials: [
+                    { name: "Плитка керамическая", norm: 1.03, priceIn: 850, priceOut: 1100 },
+                    { name: "Клей плиточный", norm: 6, priceIn: 67.2, priceOut: 86.4 },
+                    { name: "Затирка для швов", norm: 0.5, priceIn: 320, priceOut: 410 }
+                ],
+                machines: []
+            },
+            {
+                name: "Устройство стяжки пола",
+                unit: "м²",
+                labor: [
+                    { name: "Бетонщик 4 разр.", norm: 0.38, price: 420 },
+                    { name: "Бетонщик 3 разр.", norm: 0.55, price: 360 }
+                ],
+                materials: [
+                    { name: "Раствор цементно-песчаный", norm: 0.05, priceIn: 3200, priceOut: 4100 },
+                    { name: "Фиброволокно", norm: 0.6, priceIn: 85, priceOut: 110 }
+                ],
+                machines: []
+            },
+            {
+                name: "Укладка керамогранита",
+                unit: "м²",
+                labor: [
+                    { name: "Облицовщик 5 разр.", norm: 1.5, price: 450 },
+                    { name: "Облицовщик 4 разр.", norm: 2.2, price: 390 }
+                ],
+                materials: [
+                    { name: "Керамогранит", norm: 1.02, priceIn: 1250, priceOut: 1600 },
+                    { name: "Клей плиточный усиленный", norm: 8, priceIn: 112, priceOut: 144 },
+                    { name: "Затирка эпоксидная", norm: 0.6, priceIn: 520, priceOut: 660 }
+                ],
+                machines: []
+            }
+        ];
+
+        // Данные проекта
+        let projectData = [];
+
+        // Расчет работы
+        function calculateWork(work) {
+            // Труд
+            work.laborCost = 0;
+            work.labor.forEach(res => {
+                res.volume = work.volume * res.norm;
+                res.cost = res.volume * res.price;
+                work.laborCost += res.cost;
+            });
+
+            // Материалы
+            work.materialsCostIn = 0;
+            work.materialsCostOut = 0;
+            work.materials.forEach(res => {
+                res.volume = work.volume * res.norm;
+                res.costIn = res.volume * res.priceIn;
+                res.costOut = res.volume * res.priceOut;
+                work.materialsCostIn += res.costIn;
+                work.materialsCostOut += res.costOut;
+            });
+
+            // Механизмы
+            work.machinesCost = 0;
+            work.machines.forEach(res => {
+                res.volume = work.volume * res.norm;
+                res.cost = res.volume * res.price;
+                work.machinesCost += res.cost;
+            });
+
+            // Прямые затраты (материалы IN для себестоимости)
+            work.directCost = work.laborCost + work.materialsCostIn + work.machinesCost;
+
+            // Накладные 12%
+            work.overhead = work.directCost * 0.12;
+
+            // Сметная прибыль 8% (только труд + механизмы)
+            work.profit = (work.laborCost + work.machinesCost) * 0.08;
+
+            // Себестоимость IN
+            work.costIn = work.directCost + work.overhead + work.profit;
+
+            // Цена OUT (работы + накладные + прибыль + материалы OUT)
+            work.costOut = (work.laborCost + work.machinesCost + work.overhead + work.profit) + work.materialsCostOut;
+
+            // Рентабельность
+            if (work.costIn > 0) {
+                work.rentability = ((work.costOut - work.costIn) / work.costIn) * 100;
+            } else {
+                work.rentability = 0;
+            }
+        }
+
+        // Обновление значения
+        function updateValue(workIndex, category, resIndex, field, value) {
+            const val = parseFloat(value);
+            if (isNaN(val) || val < 0) return;
+
+            const work = projectData[workIndex];
+            
+            if (category === 'work') {
+                work[field] = val;
+            } else if (resIndex !== null) {
+                work[category][resIndex][field] = val;
+                
+                // Если меняем объем - пересчитываем норму
+                if (field === 'volume' && work.volume > 0) {
+                    work[category][resIndex].norm = val / work.volume;
+                }
+            }
+
+            calculateWork(work);
+            renderTable();
+        }
+
+        // Рендеринг таблицы
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const totalRow = tbody.querySelector('.total-row');
+            tbody.innerHTML = '';
+
+            let totalLabor = 0, totalMaterialsIn = 0, totalMaterialsOut = 0, totalMachines = 0;
+            let totalDirect = 0, totalOverhead = 0, totalProfit = 0, totalCostIn = 0, totalCostOut = 0;
+
+            projectData.forEach((work, workIndex) => {
+                // Строка работы
+                const workRow = document.createElement('tr');
+                workRow.className = 'work-row';
+                workRow.innerHTML = `
+                    <td style="text-align: left;"><strong>${work.name}</strong></td>
+                    <td><input type="number" value="${work.volume}" onchange="updateValue(${workIndex}, 'work', null, 'volume', this.value)"></td>
+                    <td>${work.unit}</td>
+                    <td colspan="4" class="calculated">${formatNumber(work.laborCost)}</td>
+                    <td colspan="5" class="calculated">${formatNumber(work.materialsCostIn)}</td>
+                    <td colspan="4" class="calculated">${formatNumber(work.machinesCost)}</td>
+                    <td class="calculated">${formatNumber(work.directCost)}</td>
+                    <td class="calculated">${formatNumber(work.overhead)}</td>
+                    <td class="calculated">${formatNumber(work.profit)}</td>
+                    <td class="calculated">${formatNumber(work.costIn)}</td>
+                    <td class="calculated">${formatNumber(work.costOut)}</td>
+                    <td class="calculated ${work.rentability >= 0 ? 'positive' : 'negative'}">${work.rentability.toFixed(2)}%</td>
+                    <td><button class="delete-btn" onclick="deleteWork(${workIndex})">Удалить</button></td>
+                `;
+                tbody.appendChild(workRow);
+
+                // Строки трудозатрат
+                work.labor.forEach((res, resIndex) => {
+                    const row = document.createElement('tr');
+                    row.className = 'resource-row';
+                    row.innerHTML = `
+                        <td style="text-align: left; padding-left: 30px;"><span class="icon">▸</span> ${res.name}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td><input type="number" value="${res.norm}" step="0.01" onchange="updateValue(${workIndex}, 'labor', ${resIndex}, 'norm', this.value)"></td>
+                        <td><input type="number" value="${res.volume.toFixed(2)}" step="0.01" onchange="updateValue(${workIndex}, 'labor', ${resIndex}, 'volume', this.value)"></td>
+                        <td><input type="number" value="${res.price}" step="1" onchange="updateValue(${workIndex}, 'labor', ${resIndex}, 'price', this.value)"></td>
+                        <td class="calculated">${formatNumber(res.cost)}</td>
+                        <td colspan="5">—</td>
+                        <td colspan="4">—</td>
+                        <td colspan="6">—</td>
+                        <td>—</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // Строки материалов
+                work.materials.forEach((res, resIndex) => {
+                    const row = document.createElement('tr');
+                    row.className = 'resource-row';
+                    row.innerHTML = `
+                        <td style="text-align: left; padding-left: 30px;"><span class="icon">▹</span> ${res.name}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td colspan="4">—</td>
+                        <td><input type="number" value="${res.norm}" step="0.001" onchange="updateValue(${workIndex}, 'materials', ${resIndex}, 'norm', this.value)"></td>
+                        <td><input type="number" value="${res.volume.toFixed(3)}" step="0.001" onchange="updateValue(${workIndex}, 'materials', ${resIndex}, 'volume', this.value)"></td>
+                        <td><input type="number" value="${res.priceIn}" step="1" onchange="updateValue(${workIndex}, 'materials', ${resIndex}, 'priceIn', this.value)"></td>
+                        <td><input type="number" value="${res.priceOut}" step="1" onchange="updateValue(${workIndex}, 'materials', ${resIndex}, 'priceOut', this.value)"></td>
+                        <td class="calculated">${formatNumber(res.costIn)}</td>
+                        <td colspan="4">—</td>
+                        <td colspan="6">—</td>
+                        <td>—</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // Строки механизмов
+                work.machines.forEach((res, resIndex) => {
+                    const row = document.createElement('tr');
+                    row.className = 'resource-row';
+                    row.innerHTML = `
+                        <td style="text-align: left; padding-left: 30px;"><span class="icon">🔧</span> ${res.name}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td colspan="4">—</td>
+                        <td colspan="5">—</td>
+                        <td><input type="number" value="${res.norm}" step="0.01" onchange="updateValue(${workIndex}, 'machines', ${resIndex}, 'norm', this.value)"></td>
+                        <td><input type="number" value="${res.volume.toFixed(2)}" step="0.01" onchange="updateValue(${workIndex}, 'machines', ${resIndex}, 'volume', this.value)"></td>
+                        <td><input type="number" value="${res.price}" step="1" onchange="updateValue(${workIndex}, 'machines', ${resIndex}, 'price', this.value)"></td>
+                        <td class="calculated">${formatNumber(res.cost)}</td>
+                        <td colspan="6">—</td>
+                        <td>—</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // Суммируем
+                totalLabor += work.laborCost;
+                totalMaterialsIn += work.materialsCostIn;
+                totalMaterialsOut += work.materialsCostOut;
+                totalMachines += work.machinesCost;
+                totalDirect += work.directCost;
+                totalOverhead += work.overhead;
+                totalProfit += work.profit;
+                totalCostIn += work.costIn;
+                totalCostOut += work.costOut;
+            });
+
+            // Итоговая строка
+            totalRow.innerHTML = `
+                <td colspan="3" style="text-align: right; font-size: 14px;">ИТОГО ПО СМЕТЕ:</td>
+                <td colspan="4" class="calculated">${formatNumber(totalLabor)}</td>
+                <td colspan="5" class="calculated">${formatNumber(totalMaterialsIn)}</td>
+                <td colspan="4" class="calculated">${formatNumber(totalMachines)}</td>
+                <td class="calculated">${formatNumber(totalDirect)}</td>
+                <td class="calculated">${formatNumber(totalOverhead)}</td>
+                <td class="calculated">${formatNumber(totalProfit)}</td>
+                <td class="calculated">${formatNumber(totalCostIn)}</td>
+                <td class="calculated">${formatNumber(totalCostOut)}</td>
+                <td class="calculated ${totalCostIn > 0 ? (((totalCostOut - totalCostIn) / totalCostIn * 100) >= 0 ? 'positive' : 'negative') : ''}">${totalCostIn > 0 ? ((totalCostOut - totalCostIn) / totalCostIn * 100).toFixed(2) + '%' : '0.00%'}</td>
+                <td>—</td>
+            `;
+            tbody.appendChild(totalRow);
+
+            // Обновляем статистику
+            document.getElementById('totalDirect').textContent = formatNumber(totalDirect);
+            document.getElementById('totalOverhead').textContent = formatNumber(totalOverhead);
+            document.getElementById('totalProfit').textContent = formatNumber(totalProfit);
+            document.getElementById('totalCostIn').textContent = formatNumber(totalCostIn);
+            document.getElementById('totalCostOut').textContent = formatNumber(totalCostOut);
+        }
+
+        // Форматирование числа
+        function formatNumber(num) {
+            return num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Открыть модальное окно
+        function openAddWorkModal() {
+            document.getElementById('addWorkModal').style.display = 'flex';
+        }
+
+        // Закрыть модальное окно
+        function closeAddWorkModal() {
+            document.getElementById('addWorkModal').style.display = 'none';
+        }
+
+        // Добавить работу
+        function addWork() {
+            const workIndex = parseInt(document.getElementById('workSelect').value);
+            const volume = parseFloat(document.getElementById('volumeInput').value);
+
+            if (isNaN(volume) || volume <= 0) {
+                alert('Введите корректный объем!');
+                return;
+            }
+
+            const template = WORK_DATABASE[workIndex];
+            const work = {
+                name: template.name,
+                unit: template.unit,
+                volume: volume,
+                labor: JSON.parse(JSON.stringify(template.labor)),
+                materials: JSON.parse(JSON.stringify(template.materials)),
+                machines: JSON.parse(JSON.stringify(template.machines))
+            };
+
+            calculateWork(work);
+            projectData.push(work);
+            renderTable();
+            closeAddWorkModal();
+            showNotification('✅ Работа добавлена!');
+        }
+
+        // Удалить работу
+        function deleteWork(index) {
+            if (confirm('Удалить эту работу?')) {
+                projectData.splice(index, 1);
+                renderTable();
+                showNotification('🗑️ Работа удалена!');
+            }
+        }
+
+        // Пересчитать все
+        function recalculateAll() {
+            projectData.forEach(work => calculateWork(work));
+            renderTable();
+            showNotification('🔄 Пересчет выполнен!');
+        }
+
+        // Загрузить демо
+        function loadDemo() {
+            projectData = [];
+            
+            const demoWorks = [
+                { index: 0, volume: 850 },    // Разработка грунта экскаватором
+                { index: 2, volume: 120 },    // Песчаная подготовка
+                { index: 5, volume: 180 },    // Бетонирование фундаментов
+                { index: 4, volume: 22 },     // Армирование фундаментов
+                { index: 8, volume: 85 },     // Бетонирование колонн
+                { index: 7, volume: 12 },     // Армирование колонн
+                { index: 11, volume: 520 },   // Бетонирование перекрытий
+                { index: 10, volume: 68 },    // Армирование перекрытий
+                { index: 16, volume: 720 },   // Кладка кирпич
+                { index: 18, volume: 5400 },  // Штукатурка
+                { index: 20, volume: 4200 }   // Окраска
+            ];
+
+            demoWorks.forEach(demo => {
+                const template = WORK_DATABASE[demo.index];
+                const work = {
+                    name: template.name,
+                    unit: template.unit,
+                    volume: demo.volume,
+                    labor: JSON.parse(JSON.stringify(template.labor)),
+                    materials: JSON.parse(JSON.stringify(template.materials)),
+                    machines: JSON.parse(JSON.stringify(template.machines))
+                };
+                calculateWork(work);
+                projectData.push(work);
+            });
+
+            renderTable();
+            showNotification('📂 Пример загружен!');
+        }
+
+        // Экспорт CSV
+        function exportData() {
+            let csv = '\uFEFF'; // BOM для UTF-8
+            csv += 'Наименование,ФО,ЕИ,Труд,Материалы,Механизмы,Прямые,Накладные,Прибыль,Себестоимость,Цена OUT,Рентабельность\n';
+
+            projectData.forEach(work => {
+                csv += `"${work.name}",${work.volume},${work.unit},${work.laborCost.toFixed(2)},${work.materialsCostIn.toFixed(2)},${work.machinesCost.toFixed(2)},${work.directCost.toFixed(2)},${work.overhead.toFixed(2)},${work.profit.toFixed(2)},${work.costIn.toFixed(2)},${work.costOut.toFixed(2)},${work.rentability.toFixed(2)}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'smeta_' + new Date().toISOString().split('T')[0] + '.csv';
+            link.click();
+            showNotification('📥 Экспорт выполнен!');
+        }
+
+        // Очистить все
+        function clearAll() {
+            if (confirm('Очистить все данные?')) {
+                projectData = [];
+                renderTable();
+                showNotification('🗑️ Данные очищены!');
+            }
+        }
+
+        // Показать уведомление
+        function showNotification(message) {
+            const notif = document.createElement('div');
+            notif.className = 'notification';
+            notif.textContent = message;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 2000);
+        }
+
+        // Закрытие модального окна по клику вне его
+        window.onclick = function(event) {
+            const modal = document.getElementById('addWorkModal');
+            if (event.target === modal) {
+                closeAddWorkModal();
+            }
+        };
+
+        // Инициализация
+        renderTable();
+    </script>
+</body>
+</html>
